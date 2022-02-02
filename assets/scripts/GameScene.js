@@ -2,6 +2,7 @@ class GameScene extends Phaser.Scene {
     constructor() {
         super('Game');
     }
+
     preload() {
         // 1. download background
         this.load.image('bg', 'assets/sprites/background.png')
@@ -13,25 +14,71 @@ class GameScene extends Phaser.Scene {
         this.load.image('card4', 'assets/sprites/card4.png')
         this.load.image('card5', 'assets/sprites/card5.png')
     }
+
     create() {
         // 2. background output
         this.createBackground()
         this.createCards()
+        this.start()
     }
+
+    start() {
+        this.openedCard = null
+        this.openedCardsCount = 0
+        this.initCards()
+
+    }
+
+    initCards() {
+        let positions = this.getCardsPositions()
+
+        this.cards.forEach(card => {
+            let position = positions.pop()
+            card.close()
+            card.setPosition(position.x, position.y)
+        })
+    }
+
     createBackground() {
         this.add.sprite(0, 0, 'bg').setOrigin(0, 0)
     }
+
     createCards() {
         this.cards = []
-        let positions = this.getCardsPositions()
-        Phaser.Utils.Array.Shuffle(positions)
 
         for (let value of config.cards) {
             for (let i = 0; i < 2; i++) {
-                this.cards.push(new Card(this, value, positions.pop()))
+                this.cards.push(new Card(this, value))
             }
         }
+        this.input.on('gameobjectdown', this.onCardClicked, this)
     }
+
+    onCardClicked(pointer, card) {
+        if (card.opened) {
+            return false
+        }
+        if (this.openedCard) {
+            // there is opened card
+            if (this.openedCard.value === card.value) {
+                // pictures true => memorize
+                this.openedCard = null
+                ++this.openedCardsCount
+            } else {
+                // pictures false => close
+                this.openedCard.close()
+                this.openedCard = card
+            }
+        } else {
+            // no opened card
+            this.openedCard = card
+        }
+        card.open()
+        if (this.openedCardsCount === this.cards.length / 2) {
+            this.start()
+        }
+    }
+
     getCardsPositions() {
         let positions = []
         let cardTexture = this.textures.get('card').getSourceImage()
@@ -48,6 +95,6 @@ class GameScene extends Phaser.Scene {
                 })
             }
         }
-        return positions
+        return Phaser.Utils.Array.Shuffle(positions)
     }
 }
